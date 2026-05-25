@@ -1,0 +1,193 @@
+project:
+  name: fraud_detection
+  random_seed: 42
+
+paths:
+  raw_data: data/raw/creditcard.csv
+  processed_dir: data/processed
+
+data:
+  target_column: Class
+  test_size: 0.2
+
+mlflow:
+  experiment_name: fraud_detection
+  tracking_uri: mlruns
+
+model:
+  logistic_regression:
+    # Run única quando não passar --experiment nem --all-experiments
+    max_iter: 1000
+    class_weight: balanced
+    C: 1.0
+    penalty: l2
+    solver: lbfgs
+    tol: 0.0001
+
+    # Variantes para comparar no MLflow (python scripts/train_logistic_regression.py --all-experiments)
+    experiments:
+      - name: lr_balanced_default
+        max_iter: 1000
+        class_weight: balanced
+        C: 1.0
+        penalty: l2
+        solver: lbfgs
+
+      - name: lr_balanced_strong_reg
+        max_iter: 2000
+        class_weight: balanced
+        C: 0.01
+        penalty: l2
+        solver: lbfgs
+
+      - name: lr_balanced_weak_reg
+        max_iter: 1000
+        class_weight: balanced
+        C: 10.0
+        penalty: l2
+        solver: lbfgs
+
+      - name: lr_no_class_weight
+        max_iter: 1000
+        class_weight: null
+        C: 1.0
+        penalty: l2
+        solver: lbfgs
+
+      - name: lr_l1_saga
+        max_iter: 3000
+        class_weight: balanced
+        C: 0.1
+        penalty: l1
+        solver: saga
+
+  knn:
+    # KNN em ~227k linhas de treino é lento; usa amostra estratificada no fit
+    train_sample_size: 20000
+    n_neighbors: 5
+    weights: uniform
+    metric: minkowski
+    p: 2
+    algorithm: auto
+    n_jobs: -1
+
+    experiments:
+      - name: knn_k5_uniform
+        train_sample_size: 20000
+        n_neighbors: 5
+        weights: uniform
+        metric: minkowski
+        p: 2
+
+      - name: knn_k11_uniform
+        train_sample_size: 20000
+        n_neighbors: 11
+        weights: uniform
+        metric: minkowski
+        p: 2
+
+      - name: knn_k5_distance
+        train_sample_size: 20000
+        n_neighbors: 5
+        weights: distance
+        metric: minkowski
+        p: 2
+
+      - name: knn_k5_manhattan
+        train_sample_size: 20000
+        n_neighbors: 5
+        weights: uniform
+        metric: manhattan
+
+  random_forest:
+    n_estimators: 100
+    max_depth: null
+    min_samples_split: 2
+    min_samples_leaf: 1
+    max_features: sqrt
+    class_weight: balanced
+    n_jobs: -1
+
+    experiments:
+      - name: rf_balanced_default
+        n_estimators: 100
+        max_depth: null
+        class_weight: balanced
+        max_features: sqrt
+
+      - name: rf_balanced_deep
+        n_estimators: 200
+        max_depth: 20
+        class_weight: balanced
+        max_features: sqrt
+        min_samples_leaf: 2
+
+      - name: rf_balanced_shallow
+        n_estimators: 100
+        max_depth: 8
+        class_weight: balanced
+        max_features: sqrt
+
+      - name: rf_no_class_weight
+        n_estimators: 100
+        max_depth: null
+        class_weight: null
+        max_features: sqrt
+
+      - name: rf_balanced_log2
+        n_estimators: 150
+        max_depth: 15
+        class_weight: balanced
+        max_features: log2
+        min_samples_split: 5
+
+  xgboost:
+    n_estimators: 100
+    max_depth: 6
+    learning_rate: 0.1
+    subsample: 0.8
+    colsample_bytree: 0.8
+    min_child_weight: 1
+    gamma: 0
+    reg_alpha: 0
+    reg_lambda: 1
+    scale_pos_weight: null
+    auto_scale_pos_weight: true
+    n_jobs: -1
+
+    experiments:
+      - name: xgb_auto_scale_default
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+        auto_scale_pos_weight: true
+
+      - name: xgb_auto_scale_deep
+        n_estimators: 200
+        max_depth: 8
+        learning_rate: 0.05
+        subsample: 0.9
+        auto_scale_pos_weight: true
+
+      - name: xgb_auto_scale_shallow
+        n_estimators: 100
+        max_depth: 4
+        learning_rate: 0.1
+        min_child_weight: 5
+        auto_scale_pos_weight: true
+
+      - name: xgb_no_scale
+        n_estimators: 100
+        max_depth: 6
+        learning_rate: 0.1
+        auto_scale_pos_weight: false
+        scale_pos_weight: 1
+
+      - name: xgb_strong_reg
+        n_estimators: 150
+        max_depth: 5
+        learning_rate: 0.08
+        reg_alpha: 1
+        reg_lambda: 5
+        gamma: 1
+        auto_scale_pos_weight: true
