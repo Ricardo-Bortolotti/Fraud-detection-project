@@ -1,6 +1,7 @@
 """Streamlit app para predições interativas de detecção de fraude."""
 
 import json
+import os
 from pathlib import Path
 
 import joblib
@@ -12,7 +13,7 @@ import streamlit as st
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHAMPION_DIR = PROJECT_ROOT / "models" / "champion"
-API_URL = "http://localhost:8000"
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 st.set_page_config(
     page_title="Detecção de Fraude",

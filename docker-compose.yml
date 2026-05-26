@@ -1,0 +1,56 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: fraud_postgres
+    environment:
+      POSTGRES_USER: mlflow
+      POSTGRES_PASSWORD: mlflow_password
+      POSTGRES_DB: mlflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - fraud_net
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: docker/mlflow.Dockerfile
+    ports:
+      - "5000:5000"
+    depends_on:
+      - postgres
+    networks:
+      - fraud_net
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - mlflow
+    networks:
+      - fraud_net
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: app
+    ports:
+      - "8501:8501"
+    depends_on:
+      - api
+    networks:
+      - fraud_net
+
+volumes:
+  postgres_data:
+
+networks:
+  fraud_net:

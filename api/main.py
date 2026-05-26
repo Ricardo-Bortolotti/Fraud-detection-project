@@ -1,7 +1,9 @@
 """FastAPI para servir o modelo campeão de detecção de fraude."""
 
 import json
+import os
 from contextlib import asynccontextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -10,6 +12,11 @@ import mlflow.sklearn
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
+from sqlalchemy import create_engine, text
+from sqlalchemy.orm import sessionmaker
+
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./predictions.db")
+engine = create_engine(DATABASE_URL)
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHAMPION_DIR = PROJECT_ROOT / "models" / "champion"
@@ -76,6 +83,7 @@ class ModelInfo(BaseModel):
 model = None
 scaler = None
 metadata = None
+db = None
 
 # ============================================================
 # Lifespan (startup/shutdown)
@@ -146,6 +154,17 @@ async def lifespan(app: FastAPI):
 
     print("API pronta para receber requests.")
 
+    # ========================================================
+    # Inicializar banco de dados
+    # ========================================================
+
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+        print("Conexão com PostgreSQL estabelecida.")
+    except Exception as e:
+        print(f"Aviso: Não foi possível conectar ao PostgreSQL: {e}")
+
     yield
 
     # ========================================================
@@ -153,6 +172,7 @@ async def lifespan(app: FastAPI):
     # ========================================================
 
     print("Encerrando API...")
+    engine.dispose()
 
 # ============================================================
 # FastAPI app
@@ -204,7 +224,7 @@ def predict(
     request_data: PredictionRequest,
     request: Request,
 ) -> PredictionResponse:
-    """Faz predição de fraude."""
+    """Faz predição de fraude e salva no banco de dados."""
 
     model = request.app.state.model
     scaler = request.app.state.scaler
@@ -230,6 +250,41 @@ def predict(
     prediction = model.predict(features)[0]
 
     probability = model.predict_proba(features)[0, 1]
+
+    # Salvar predição no banco de dados
+    try:
+        with engine.connect() as conn:
+            insert_query = text("""
+                INSERT INTO predictions (
+                    v1, v2, v3, v4, v5, v6, v7, v8, v9, v10,
+                    v11, v12, v13, v14, v15, v16, v17, v18, v19, v20,
+                    v21, v22, v23, v24, v25, v26, v27, v28, amount,
+                    prediction, probability, is_fraud
+                ) VALUES (
+                    :v1, :v2, :v3, :v4, :v5, :v6, :v7, :v8, :v9, :v10,
+                    :v11, :v12, :v13, :v14, :v15, :v16, :v17, :v18, :v19, :v20,
+                    :v21, :v22, :v23, :v24, :v25, :v26, :v27, :v28, :amount,
+                    :prediction, :probability, :is_fraud
+                )
+            """)
+            
+            conn.execute(insert_query, {
+                "v1": request_data.V1, "v2": request_data.V2, "v3": request_data.V3,
+                "v4": request_data.V4, "v5": request_data.V5, "v6": request_data.V6,
+                "v7": request_data.V7, "v8": request_data.V8, "v9": request_data.V9,
+                "v10": request_data.V10, "v11": request_data.V11, "v12": request_data.V12,
+                "v13": request_data.V13, "v14": request_data.V14, "v15": request_data.V15,
+                "v16": request_data.V16, "v17": request_data.V17, "v18": request_data.V18,
+                "v19": request_data.V19, "v20": request_data.V20, "v21": request_data.V21,
+                "v22": request_data.V22, "v23": request_data.V23, "v24": request_data.V24,
+                "v25": request_data.V25, "v26": request_data.V26, "v27": request_data.V27,
+                "v28": request_data.V28, "amount": request_data.Amount,
+                "prediction": int(prediction), "probability": float(probability),
+                "is_fraud": bool(prediction == 1)
+            })
+            conn.commit()
+    except Exception as e:
+        print(f"Erro ao salvar predição no banco: {e}")
 
     return PredictionResponse(
         prediction=int(prediction),

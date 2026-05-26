@@ -9,6 +9,9 @@ Projeto de Machine Learning com o dataset [Credit Card Fraud Detection](https://
 - `src/` — código de pré-processamento, modelos e métricas
 - `scripts/` — treino e pipelines
 - `mlruns/` — experimentos MLflow (local)
+- `api/` — API FastAPI para predições
+- `app/` — Interface Streamlit
+- `docker/` — Scripts de inicialização do banco
 
 ## Setup
 
@@ -16,6 +19,48 @@ Projeto de Machine Learning com o dataset [Credit Card Fraud Detection](https://
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
+```
+
+## Docker
+
+### Pré-requisitos
+
+- Docker Desktop instalado
+- Docker Compose
+
+### Subir todos os serviços
+
+```bash
+docker compose up --build
+```
+
+Isso iniciará:
+- **PostgreSQL** (porta 5432) — Backend para MLflow e armazenamento de predições
+- **MLflow Server** (porta 5000) — Tracking e UI de experimentos
+- **API FastAPI** (porta 8000) — Serviço de predição
+- **Streamlit App** (porta 8501) — Interface web interativa
+
+### Acessar os serviços
+
+- API: http://localhost:8000
+- Streamlit: http://localhost:8501
+- MLflow UI: http://localhost:5000
+- Documentação API: http://localhost:8000/docs
+
+### Comandos úteis
+
+```bash
+# Parar serviços
+docker compose down
+
+# Parar e remover volumes
+docker compose down -v
+
+# Ver logs
+docker compose logs -f
+
+# Ver logs de um serviço específico
+docker compose logs -f api
 ```
 
 ## Uso rápido

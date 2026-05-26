@@ -38,7 +38,9 @@ def train_and_log(
 
         # Salvar scaler se fornecido
         if scaler is not None:
-            joblib.dump(scaler, "scaler.joblib")
+            scaler_path = Path("models/champion/model/model/scaler.joblib")
+            scaler_path.parent.mkdir(parents=True, exist_ok=True)
+            joblib.dump(scaler, scaler_path)
             mlflow.log_artifact("scaler.joblib", artifact_path="model")
 
     return metrics
