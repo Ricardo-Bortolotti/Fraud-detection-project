@@ -14,7 +14,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import mlflow
 
 from src.data.load import load_creditcard_data
-from src.data.preprocess import prepare_train_test
+from src.data.preprocess import apply_balance_strategy, prepare_train_test
 from src.models.estimators.random_forest import build_random_forest
 from src.models.train import train_and_log
 from src.utils.config import load_config, PROJECT_ROOT as ROOT
@@ -106,6 +106,8 @@ def train_single_run(
     run_name: str,
     rf_params: dict[str, Any],
     train_sample_size: int | None,
+    balance_strategy: str = "none",
+    sampling_ratio: float = 0.5,
 ) -> dict[str, float]:
     seed = cfg["project"]["random_seed"]
     raw_path = ROOT / cfg["paths"]["raw_data"]
@@ -116,7 +118,7 @@ def train_single_run(
         print(f"Amostra de treino (estratificada): {train_sample_size:,} linhas")
 
     df = load_creditcard_data(raw_path)
-    X_train, X_test, y_train, y_test, _ = prepare_train_test(
+    X_train, X_test, y_train, y_test, scaler = prepare_train_test(
         df,
         target_column=cfg["data"]["target_column"],
         test_size=cfg["data"]["test_size"],
@@ -127,6 +129,13 @@ def train_single_run(
     if train_sample_size:
         X_train, y_train = _subsample_train(X_train, y_train, train_sample_size, seed)
 
+    n_train_before_balance = len(X_train)
+    if balance_strategy != "none":
+        print(f"Aplicando balanceamento: {balance_strategy} (ratio={sampling_ratio})")
+        X_train, y_train = apply_balance_strategy(
+            X_train, y_train, strategy=balance_strategy, sampling_ratio=sampling_ratio, random_state=seed
+        )
+
     model = build_random_forest(random_state=seed, **rf_params)
 
     log_params: dict[str, Any] = {
@@ -135,6 +144,7 @@ def train_single_run(
         "random_seed": seed,
         "n_train_before_subsample": n_train_before,
         "n_train_used": len(X_train),
+        "balance_strategy": balance_strategy,
     }
     if train_sample_size:
         log_params["train_sample_size"] = train_sample_size
@@ -142,6 +152,9 @@ def train_single_run(
         log_params["class_weight"] = "none"
     if log_params.get("max_depth") is None:
         log_params["max_depth"] = "none"
+    if balance_strategy != "none":
+        log_params["sampling_ratio"] = sampling_ratio
+        log_params["n_train_before_balance"] = n_train_before_balance
 
     print("Treinando Random Forest...")
     metrics = train_and_log(
@@ -152,6 +165,7 @@ def train_single_run(
         y_test,
         model_name=run_name,
         params=log_params,
+        scaler=scaler,
     )
 
     print("Métricas no conjunto de teste:")
@@ -177,6 +191,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--class-weight", type=str, default=None)
     parser.add_argument("--n-jobs", type=int, default=None)
     parser.add_argument("--train-sample-size", type=int, default=None)
+    parser.add_argument(
+        "--use-smote",
+        action="store_true",
+        help="Usa SMOTE para oversampling da classe minoritária",
+    )
+    parser.add_argument(
+        "--use-oversampling",
+        action="store_true",
+        help="Usa RandomOverSampler para oversampling da classe minoritária",
+    )
+    parser.add_argument(
+        "--sampling-ratio",
+        type=float,
+        default=0.5,
+        help="Ratio para oversampling/SMOTE (0.0 a 1.0)",
+    )
     return parser.parse_args()
 
 
@@ -203,6 +233,26 @@ def main() -> None:
     if args.n_jobs is not None:
         cli_overrides["n_jobs"] = args.n_jobs
 
+    # Validação de estratégias de balanceamento mutuamente exclusivas
+    active_strategies = []
+    if args.train_sample_size is not None:
+        active_strategies.append("subsampling")
+    if args.use_smote:
+        active_strategies.append("smote")
+    if args.use_oversampling:
+        active_strategies.append("oversampling")
+
+    if len(active_strategies) > 1:
+        raise ValueError(
+            f"Apenas uma estratégia de balanceamento pode ser usada por vez. Ativas: {', '.join(active_strategies)}"
+        )
+
+    balance_strategy = "none"
+    if args.use_smote:
+        balance_strategy = "smote"
+    elif args.use_oversampling:
+        balance_strategy = "oversampling"
+
     if args.all_experiments:
         rf_cfg = cfg["model"]["random_forest"]
         for exp in rf_cfg.get("experiments", []):
@@ -214,7 +264,7 @@ def main() -> None:
             )
             if args.run_name:
                 run_name = f"{args.run_name}_{exp['name']}"
-            train_single_run(cfg, run_name, rf_params, train_sample_size)
+            train_single_run(cfg, run_name, rf_params, train_sample_size, balance_strategy, args.sampling_ratio)
     else:
         run_name, rf_params, train_sample_size = _build_run_config(
             cfg,
@@ -224,7 +274,7 @@ def main() -> None:
         )
         if args.run_name:
             run_name = args.run_name
-        train_single_run(cfg, run_name, rf_params, train_sample_size)
+        train_single_run(cfg, run_name, rf_params, train_sample_size, balance_strategy, args.sampling_ratio)
 
     print(f"\nExperimentos MLflow em: {ROOT / cfg['mlflow']['tracking_uri']}")
 

@@ -1,8 +1,10 @@
 from typing import Any
 
+import joblib
 import mlflow
 import numpy as np
 from sklearn.base import ClassifierMixin
+from sklearn.preprocessing import StandardScaler
 
 from src.evaluation.metrics import classification_metrics
 
@@ -15,6 +17,7 @@ def train_and_log(
     y_test: np.ndarray,
     model_name: str,
     params: dict[str, Any] | None = None,
+    scaler: StandardScaler | None = None,
 ) -> dict[str, float]:
     """Treina o modelo, calcula métricas e registra no MLflow."""
     params = params or {}
@@ -32,5 +35,10 @@ def train_and_log(
 
         mlflow.sklearn.log_model(model, artifact_path="model")
         mlflow.set_tag("model_type", model_name)
+
+        # Salvar scaler se fornecido
+        if scaler is not None:
+            joblib.dump(scaler, "scaler.joblib")
+            mlflow.log_artifact("scaler.joblib", artifact_path="model")
 
     return metrics

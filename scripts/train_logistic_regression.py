@@ -11,7 +11,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 import mlflow
 
 from src.data.load import load_creditcard_data
-from src.data.preprocess import prepare_train_test
+from src.data.preprocess import apply_balance_strategy, prepare_train_test
 from src.models.estimators.logistic_regression import build_logistic_regression
 from src.models.train import train_and_log
 from src.utils.config import load_config, PROJECT_ROOT as ROOT
@@ -66,6 +66,8 @@ def train_single_run(
     cfg: dict[str, Any],
     run_name: str,
     lr_params: dict[str, Any],
+    balance_strategy: str = "none",
+    sampling_ratio: float = 0.5,
 ) -> dict[str, float]:
     seed = cfg["project"]["random_seed"]
     raw_path = ROOT / cfg["paths"]["raw_data"]
@@ -74,12 +76,19 @@ def train_single_run(
     print(f"Hiperparâmetros: {lr_params}")
 
     df = load_creditcard_data(raw_path)
-    X_train, X_test, y_train, y_test, _ = prepare_train_test(
+    X_train, X_test, y_train, y_test, scaler = prepare_train_test(
         df,
         target_column=cfg["data"]["target_column"],
         test_size=cfg["data"]["test_size"],
         random_state=seed,
     )
+
+    n_train_before_balance = len(X_train)
+    if balance_strategy != "none":
+        print(f"Aplicando balanceamento: {balance_strategy} (ratio={sampling_ratio})")
+        X_train, y_train = apply_balance_strategy(
+            X_train, y_train, strategy=balance_strategy, sampling_ratio=sampling_ratio, random_state=seed
+        )
 
     model = build_logistic_regression(random_state=seed, **lr_params)
 
@@ -87,9 +96,13 @@ def train_single_run(
         **lr_params,
         "test_size": cfg["data"]["test_size"],
         "random_seed": seed,
+        "balance_strategy": balance_strategy,
     }
     if log_params.get("class_weight") is None:
         log_params["class_weight"] = "none"
+    if balance_strategy != "none":
+        log_params["sampling_ratio"] = sampling_ratio
+        log_params["n_train_before_balance"] = n_train_before_balance
 
     metrics = train_and_log(
         model,
@@ -99,6 +112,7 @@ def train_single_run(
         y_test,
         model_name=run_name,
         params=log_params,
+        scaler=scaler,
     )
 
     print("Métricas no conjunto de teste:")
@@ -136,6 +150,22 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--penalty", type=str, default=None, choices=("l1", "l2", "elasticnet"))
     parser.add_argument("--solver", type=str, default=None)
     parser.add_argument("--tol", type=float, default=None)
+    parser.add_argument(
+        "--use-smote",
+        action="store_true",
+        help="Usa SMOTE para oversampling da classe minoritária",
+    )
+    parser.add_argument(
+        "--use-oversampling",
+        action="store_true",
+        help="Usa RandomOverSampler para oversampling da classe minoritária",
+    )
+    parser.add_argument(
+        "--sampling-ratio",
+        type=float,
+        default=0.5,
+        help="Ratio para oversampling/SMOTE (0.0 a 1.0)",
+    )
     return parser.parse_args()
 
 
@@ -160,6 +190,18 @@ def main() -> None:
     if args.tol is not None:
         cli_overrides["tol"] = args.tol
 
+    # Validação de estratégias de balanceamento mutuamente exclusivas
+    if args.use_smote and args.use_oversampling:
+        raise ValueError(
+            "Apenas uma estratégia de balanceamento pode ser usada por vez. Use --use-smote ou --use-oversampling, não ambos."
+        )
+
+    balance_strategy = "none"
+    if args.use_smote:
+        balance_strategy = "smote"
+    elif args.use_oversampling:
+        balance_strategy = "oversampling"
+
     if args.all_experiments:
         lr_cfg = cfg["model"]["logistic_regression"]
         for exp in lr_cfg.get("experiments", []):
@@ -168,7 +210,7 @@ def main() -> None:
                 lr_params.update(cli_overrides)
             if args.run_name:
                 run_name = f"{args.run_name}_{exp['name']}"
-            train_single_run(cfg, run_name, lr_params)
+            train_single_run(cfg, run_name, lr_params, balance_strategy, args.sampling_ratio)
     else:
         run_name, lr_params = _build_run_config(
             cfg,
@@ -177,7 +219,7 @@ def main() -> None:
         )
         if args.run_name:
             run_name = args.run_name
-        train_single_run(cfg, run_name, lr_params)
+        train_single_run(cfg, run_name, lr_params, balance_strategy, args.sampling_ratio)
 
     print(f"\nExperimentos MLflow em: {ROOT / cfg['mlflow']['tracking_uri']}")
 
