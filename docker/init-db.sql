@@ -1,6 +1,10 @@
--- Criar banco de dados para armazenar predições
-CREATE DATABASE IF NOT EXISTS fraud_detection;
+-- Criar banco de dados para MLflow
+CREATE DATABASE mlflow;
 
+-- Conceder permissões para MLflow
+GRANT ALL PRIVILEGES ON DATABASE mlflow TO postgres;
+
+-- O banco fraud_detection já é criado pelo POSTGRES_DB
 -- Conectar ao banco de dados fraud_detection
 \c fraud_detection;
 
@@ -47,6 +51,5 @@ CREATE INDEX IF NOT EXISTS idx_predictions_timestamp ON predictions(timestamp);
 CREATE INDEX IF NOT EXISTS idx_predictions_is_fraud ON predictions(is_fraud);
 
 -- Conceder permissões
-GRANT ALL PRIVILEGES ON DATABASE fraud_detection TO mlflow;
-GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO mlflow;
-GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO mlflow;
+GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA public TO postgres;
+GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
