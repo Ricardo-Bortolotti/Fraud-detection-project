@@ -39,4 +39,13 @@ artifacts/
 .DS_Store
 Thumbs.db
 
+# databases locais
+*.db
+predictions.db
+*.sqlite
+*.sqlite3
+
+# logs e outputs
 *.log
+logs/
+data/output/
