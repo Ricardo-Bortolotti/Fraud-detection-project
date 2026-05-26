@@ -17,7 +17,7 @@ from sqlalchemy import create_engine, text
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CHAMPION_DIR = PROJECT_ROOT / "models" / "champion"
 API_URL = os.getenv("API_URL", "http://localhost:8000")
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://postgres:postgres@postgres:5432/fraud_detection")
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 st.set_page_config(
     page_title="Detecção de Fraude",

@@ -13,7 +13,7 @@ data:
 mlflow:
   experiment_name: fraud_detection
   tracking_uri: http://mlflow:5000
-  backend_store_uri: postgresql://postgres:postgres@postgres:5432/mlflow
+  backend_store_uri: ${MLFLOW_BACKEND_STORE_URI:-postgresql://postgres:postgres@postgres:5432/mlflow}
 
 model:
   logistic_regression:

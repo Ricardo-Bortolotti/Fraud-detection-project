@@ -99,7 +99,27 @@ Este projeto implementa uma pipeline completa de Machine Learning para detecçã
 └── uv.lock                # Locked dependencies
 ```
 
-## 🚀 Quick Start
+## � Configuração de Variáveis de Ambiente
+
+Para segurança, as credenciais são gerenciadas via variáveis de ambiente:
+
+1. Copie o arquivo de exemplo:
+```bash
+cp .env.example .env
+```
+
+2. Edite o arquivo `.env` com suas credenciais:
+```bash
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_secure_password_here
+POSTGRES_DB=fraud_detection
+DATABASE_URL=postgresql://postgres:your_secure_password_here@postgres:5432/fraud_detection
+MLFLOW_BACKEND_STORE_URI=postgresql://postgres:your_secure_password_here@postgres:5432/mlflow
+```
+
+3. O arquivo `.env` já está no `.gitignore` e não será commitado no repositório.
+
+## �🚀 Quick Start
 
 ### Pré-requisitos
 
