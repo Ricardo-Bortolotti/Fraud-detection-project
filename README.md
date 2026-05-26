@@ -1,6 +1,6 @@
 # 💳 Detecção de Fraude em Cartões de Crédito
 
-Sistema end-to-end de detecção de fraude em transações de cartão de crédito utilizando Machine Learning, com arquitetura em containers, API REST e interface de monitoramento em tempo real.
+Projeto de detecção de fraude em transações de cartão de crédito utilizando Machine Learning, FastAPI, PostgreSQL, MLflow e Streamlit.
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)](https://fastapi.tiangolo.com/)
@@ -10,7 +10,7 @@ Sistema end-to-end de detecção de fraude em transações de cartão de crédit
 
 ## 🎯 Visão Geral
 
-Este projeto implementa uma pipeline completa de Machine Learning para detecção de fraudes em transações de cartão de crédito, seguindo boas práticas de MLOps:
+Este projeto implementa uma pipeline completa de Machine Learning para detecção de fraudes em transações de cartão de crédito, incluindo tracking de experimentos, versionamento de modelos e deploy containerizado:
 
 - **Experimentação**: MLflow para tracking de experimentos e versionamento de modelos
 - **Deploy**: API FastAPI com Docker Compose para orquestração
@@ -25,12 +25,6 @@ Este projeto implementa uma pipeline completa de Machine Learning para detecçã
 │   Streamlit     │────▶│   FastAPI       │────▶│   PostgreSQL    │
 │   App (8501)    │     │   API (8000)    │     │   (5432)        │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
-                                │
-                                ▼
-                        ┌─────────────────┐
-                        │   MLflow UI     │
-                        │   (5000)        │
-                        └─────────────────┘
 ```
 
 ### Componentes
@@ -45,7 +39,7 @@ Este projeto implementa uma pipeline completa de Machine Learning para detecçã
   - Comparação de métricas entre runs
 
 - **FastAPI API**: Serviço REST para:
-  - Predições em tempo real
+  - Predições via API
   - Endpoint `/predict` com validação Pydantic
   - Logging automático de predições no PostgreSQL
   - Health checks e documentação automática
