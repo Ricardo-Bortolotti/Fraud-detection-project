@@ -370,6 +370,12 @@ For imbalanced datasets (fraud is rare):
 - **No authentication yet**: API and dashboard are public; not suitable for production as-is
 - **Synchronous predictions may limit throughput**: The API processes one request at a time without batching
 
+## Interface
+
+<img width="1815" height="902" alt="image" src="https://github.com/user-attachments/assets/9525fe5d-6d8a-4b64-947b-2c919cb46d39" />
+<img width="1227" height="690" alt="image" src="https://github.com/user-attachments/assets/db345aef-63fc-4919-982d-c4b1e3066ae6" />
+<img width="1808" height="727" alt="image" src="https://github.com/user-attachments/assets/d0911ba2-54dc-4aa0-b8e4-d722fb6fd6e1" />
+
 ## 📊 Model Performance
 
 - **Best PR-AUC achieved**: 0.8542
