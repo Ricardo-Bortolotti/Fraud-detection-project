@@ -254,7 +254,7 @@ with tab3:
                         "Type": ["Legitimate", "Fraud"],
                         "Count": [stats.legitimate_count, stats.fraud_count]
                     })
-                    fig_pie = px.pie(pie_data, values="Quantidade", names="Tipo", 
+                    fig_pie = px.pie(pie_data, values="Count", names="Type", 
                                      color="Type", color_discrete_map={"Legitimate": "green", "Fraud": "red"})
                     st.plotly_chart(fig_pie, use_container_width=True)
                 
@@ -300,7 +300,7 @@ with tab3:
                 """)
                 timeline_data = conn.execute(timeline_query).fetchall()
                 timeline_df = pd.DataFrame(timeline_data, columns=["Date", "Total", "Frauds"])
-                timeline_df = timeline_df.sort_values("Data")
+                timeline_df = timeline_df.sort_values("Date")
                 
                 fig_timeline = go.Figure()
                 fig_timeline.add_trace(go.Scatter(x=timeline_df["Date"], y=timeline_df["Total"], 
