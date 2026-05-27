@@ -1,4 +1,4 @@
-"""Streamlit app para predições interativas de detecção de fraude."""
+"""Streamlit app for interactive credit card fraud predictions."""
 
 import json
 import os
@@ -20,24 +20,24 @@ API_URL = os.getenv("API_URL", "http://localhost:8000")
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 st.set_page_config(
-    page_title="Detecção de Fraude",
+    page_title="Fraud Detection",
     page_icon="💳",
     layout="wide",
 )
 
-st.title("💳 Detecção de Fraude em Cartões de Crédito")
+st.title("💳 Credit Card Fraud Detection")
 st.markdown(
-    "Esta interface usa o modelo campeão (selecionado por PR-AUC) para prever se uma transação é fraudulenta."
+    "This interface uses the champion model (selected by PR-AUC) to predict if a transaction is fraudulent."
 )
 
-# Tabs para diferentes modos de entrada
-tab1, tab2, tab3 = st.tabs(["Entrada Manual", "Upload JSON", "Monitoramento"])
+# Tabs for different input modes
+tab1, tab2, tab3 = st.tabs(["Manual Input", "JSON Upload", "Monitoring"])
 
 with tab1:
-    st.header("Entrada Manual")
-    st.markdown("Insira os valores das features para fazer uma predição.")
+    st.header("Manual Input")
+    st.markdown("Enter feature values to make a single prediction.")
 
-    # Criar colunas para as features
+    # Feature input columns
     col1, col2, col3 = st.columns(3)
 
     with col1:
@@ -75,7 +75,7 @@ with tab1:
         V28 = st.number_input("V28", value=0.0, format="%.4f")
         Amount = st.number_input("Amount", value=0.0, format="%.2f")
 
-    if st.button("Fazer Predição", type="primary"):
+    if st.button("Make Prediction", type="primary"):
         try:
             response = requests.post(
                 f"{API_URL}/predict",
@@ -117,45 +117,45 @@ with tab1:
 
             st.divider()
             if result["is_fraud"]:
-                st.error(f"🚨 **FRAUDE DETECTADA**")
-                st.metric("Probabilidade de Fraude", f"{result['probability']:.2%}")
+                st.error(f"🚨 **FRAUD DETECTED**")
+                st.metric("Fraud Probability", f"{result['probability']:.2%}")
             else:
-                st.success(f"✅ **Transação Legítima**")
-                st.metric("Probabilidade de Fraude", f"{result['probability']:.2%}")
+                st.success(f"✅ **Legitimate Transaction**")
+                st.metric("Fraud Probability", f"{result['probability']:.2%}")
 
         except requests.exceptions.ConnectionError:
             st.error(
-                "Não foi possível conectar à API. Certifique-se de que a API está rodando em "
-                f"{API_URL}. Execute: `uvicorn api.main:app --reload`"
+                "Could not connect to the API. Ensure the API is running at "
+                f"{API_URL}. Run: `uvicorn api.main:app --reload`"
             )
         except Exception as e:
-            st.error(f"Erro ao fazer predição: {str(e)}")
+            st.error(f"Error making prediction: {str(e)}")
 
 with tab2:
-    st.header("Upload JSON")
-    st.markdown("Faça upload de um arquivo JSON com as features para fazer predições em lote.")
+    st.header("JSON Upload")
+    st.markdown("Upload a JSON file with features for batch predictions.")
 
-    uploaded_file = st.file_uploader("Escolha um arquivo JSON", type=["json"])
+    uploaded_file = st.file_uploader("Choose a JSON file", type=["json"])
 
     if uploaded_file is not None:
         try:
             data = json.load(uploaded_file)
             
-            # Verificar se é uma lista de objetos
+            # Expect a list of feature objects
             if not isinstance(data, list):
-                st.error("O JSON deve ser uma lista de objetos com as features.")
+                st.error("The JSON must be a list of objects with features.")
             else:
                 df = pd.DataFrame(data)
-                st.write("Prévia dos dados:")
+                st.write("Data preview:")
                 st.dataframe(df.head())
 
-                # Verificar se as colunas necessárias estão presentes
+                # Required feature columns
                 required_cols = [f"V{i}" for i in range(1, 29)] + ["Amount"]
                 missing_cols = set(required_cols) - set(df.columns)
                 if missing_cols:
-                    st.error(f"Colunas faltando: {missing_cols}")
+                    st.error(f"Missing columns: {missing_cols}")
                 else:
-                    if st.button("Fazer Predições em Lote", type="primary"):
+                    if st.button("Make Batch Predictions", type="primary"):
                         try:
                             results = []
                             for _, row in df.iterrows():
@@ -168,28 +168,28 @@ with tab2:
                                 result = response.json()
                                 results.append(result)
 
-                            # Adicionar resultados ao dataframe
+                            # Merge API results into the dataframe
                             results_df = df.copy()
                             results_df["prediction"] = [r["prediction"] for r in results]
                             results_df["probability"] = [r["probability"] for r in results]
                             results_df["is_fraud"] = [r["is_fraud"] for r in results]
 
                             st.divider()
-                            st.success("Predições concluídas!")
-                            st.write("Resultados:")
+                            st.success("Predictions completed!")
+                            st.write("Results:")
                             st.dataframe(results_df)
 
-                            # Estatísticas
+                            # Batch statistics
                             fraud_count = sum(results_df["is_fraud"])
                             total_count = len(results_df)
-                            st.metric("Total de Transações", total_count)
-                            st.metric("Transações Fraudulentas", fraud_count)
-                            st.metric("Taxa de Fraude", f"{fraud_count/total_count:.2%}")
+                            st.metric("Total Transactions", total_count)
+                            st.metric("Fraudulent Transactions", fraud_count)
+                            st.metric("Fraud Rate", f"{fraud_count/total_count:.2%}")
 
-                            # Botão para download
+                            # Download results
                             json_result = results_df.to_json(orient="records", indent=2)
                             st.download_button(
-                                label="Download Resultados",
+                                label="Download Results",
                                 data=json_result,
                                 file_name="predictions.json",
                                 mime="application/json",
@@ -197,26 +197,26 @@ with tab2:
 
                         except requests.exceptions.ConnectionError:
                             st.error(
-                                "Não foi possível conectar à API. Certifique-se de que a API está rodando em "
-                                f"{API_URL}. Execute: `uvicorn api.main:app --reload`"
+                                "Could not connect to the API. Ensure the API is running at "
+                                f"{API_URL}. Run: `uvicorn api.main:app --reload`"
                             )
                         except Exception as e:
-                            st.error(f"Erro ao fazer predições: {str(e)}")
+                            st.error(f"Error making predictions: {str(e)}")
 
         except Exception as e:
-            st.error(f"Erro ao ler arquivo JSON: {str(e)}")
+            st.error(f"Error reading JSON file: {str(e)}")
 
 with tab3:
-    st.header("Monitoramento de Predições")
-    st.markdown("Visualize estatísticas e histórico das predições salvas no banco de dados.")
+    st.header("Prediction Monitoring")
+    st.markdown("Visualize statistics and history of predictions saved in the database.")
     
-    # Conectar ao banco de dados
+    # Database connection
     try:
         engine = create_engine(DATABASE_URL)
         
-        # Buscar dados do banco
+        # Query prediction history
         with engine.connect() as conn:
-            # Estatísticas gerais
+            # Aggregate statistics
             stats_query = text("""
                 SELECT 
                     COUNT(*) as total,
@@ -230,39 +230,39 @@ with tab3:
             stats = conn.execute(stats_query).fetchone()
             
             if stats.total == 0:
-                st.info("Nenhuma predição registrada no banco de dados ainda.")
+                st.info("No predictions recorded in the database yet.")
             else:
-                # Métricas principais
+                # Summary metrics
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
-                    st.metric("Total de Predições", stats.total)
+                    st.metric("Total Predictions", stats.total)
                 with col2:
-                    st.metric("Fraudes Detectadas", stats.fraud_count)
+                    st.metric("Frauds Detected", stats.fraud_count)
                 with col3:
-                    st.metric("Transações Legítimas", stats.legitimate_count)
+                    st.metric("Legitimate Transactions", stats.legitimate_count)
                 with col4:
                     fraud_rate = (stats.fraud_count / stats.total * 100) if stats.total > 0 else 0
-                    st.metric("Taxa de Fraude", f"{fraud_rate:.2f}%")
+                    st.metric("Fraud Rate", f"{fraud_rate:.2f}%")
                 
                 st.divider()
                 
-                # Gráfico de pizza - Distribuição de fraudes
+                # Pie chart: fraud vs legitimate
                 col1, col2 = st.columns(2)
                 with col1:
-                    st.subheader("Distribuição de Predições")
+                    st.subheader("Prediction Distribution")
                     pie_data = pd.DataFrame({
-                        "Tipo": ["Legítima", "Fraude"],
-                        "Quantidade": [stats.legitimate_count, stats.fraud_count]
+                        "Type": ["Legitimate", "Fraud"],
+                        "Count": [stats.legitimate_count, stats.fraud_count]
                     })
                     fig_pie = px.pie(pie_data, values="Quantidade", names="Tipo", 
-                                     color="Tipo", color_discrete_map={"Legítima": "green", "Fraude": "red"})
+                                     color="Type", color_discrete_map={"Legitimate": "green", "Fraud": "red"})
                     st.plotly_chart(fig_pie, use_container_width=True)
                 
                 with col2:
-                    st.subheader("Probabilidade Média")
-                    st.metric("Probabilidade Média de Fraude", f"{stats.avg_probability:.2%}")
+                    st.subheader("Average Probability")
+                    st.metric("Average Fraud Probability", f"{stats.avg_probability:.2%}")
                     
-                    # Buscar distribuição de probabilidades
+                    # Probability bucket distribution
                     prob_query = text("""
                         SELECT 
                             CASE 
@@ -278,16 +278,16 @@ with tab3:
                         ORDER BY prob_range
                     """)
                     prob_dist = conn.execute(prob_query).fetchall()
-                    prob_df = pd.DataFrame(prob_dist, columns=["Faixa", "Quantidade"])
-                    fig_bar = px.bar(prob_df, x="Faixa", y="Quantidade", 
-                                    title="Distribuição de Probabilidades",
-                                    color="Quantidade", color_continuous_scale="Viridis")
+                    prob_df = pd.DataFrame(prob_dist, columns=["Range", "Count"])
+                    fig_bar = px.bar(prob_df, x="Range", y="Count", 
+                                    title="Probability Distribution",
+                                    color="Count", color_continuous_scale="Viridis")
                     st.plotly_chart(fig_bar, use_container_width=True)
                 
                 st.divider()
                 
-                # Timeline de predições
-                st.subheader("Timeline de Predições")
+                # Prediction timeline
+                st.subheader("Prediction Timeline")
                 timeline_query = text("""
                     SELECT 
                         DATE(timestamp) as date,
@@ -299,21 +299,21 @@ with tab3:
                     LIMIT 30
                 """)
                 timeline_data = conn.execute(timeline_query).fetchall()
-                timeline_df = pd.DataFrame(timeline_data, columns=["Data", "Total", "Fraudes"])
+                timeline_df = pd.DataFrame(timeline_data, columns=["Date", "Total", "Frauds"])
                 timeline_df = timeline_df.sort_values("Data")
                 
                 fig_timeline = go.Figure()
-                fig_timeline.add_trace(go.Scatter(x=timeline_df["Data"], y=timeline_df["Total"], 
+                fig_timeline.add_trace(go.Scatter(x=timeline_df["Date"], y=timeline_df["Total"], 
                                                mode="lines+markers", name="Total", line=dict(color="blue")))
-                fig_timeline.add_trace(go.Scatter(x=timeline_df["Data"], y=timeline_df["Fraudes"], 
-                                               mode="lines+markers", name="Fraudes", line=dict(color="red")))
-                fig_timeline.update_layout(title="Predições por Data", xaxis_title="Data", yaxis_title="Quantidade")
+                fig_timeline.add_trace(go.Scatter(x=timeline_df["Date"], y=timeline_df["Frauds"], 
+                                               mode="lines+markers", name="Frauds", line=dict(color="red")))
+                fig_timeline.update_layout(title="Predictions by Date", xaxis_title="Date", yaxis_title="Count")
                 st.plotly_chart(fig_timeline, use_container_width=True)
                 
                 st.divider()
                 
-                # Tabela de predições recentes
-                st.subheader("Predições Recentes")
+                # Recent predictions table
+                st.subheader("Recent Predictions")
                 recent_query = text("""
                     SELECT * FROM predictions 
                     ORDER BY timestamp DESC 
@@ -323,22 +323,22 @@ with tab3:
                 recent_df = pd.DataFrame(recent_data)
                 
                 if not recent_df.empty:
-                    # Formatar colunas para exibição
+                    # Display column labels
                     recent_df["timestamp"] = pd.to_datetime(recent_df["timestamp"])
                     recent_df = recent_df[["id", "timestamp", "amount", "prediction", "probability", "is_fraud"]]
-                    recent_df.columns = ["ID", "Timestamp", "Amount", "Predição", "Probabilidade", "É Fraude?"]
+                    recent_df.columns = ["ID", "Timestamp", "Amount", "Prediction", "Probability", "Is Fraud?"]
                     st.dataframe(recent_df, use_container_width=True)
                 
-                # Informações de período
-                st.caption(f"Período: {stats.first_prediction} até {stats.last_prediction}")
+                # Time range caption
+                st.caption(f"Period: {stats.first_prediction} to {stats.last_prediction}")
     
     except Exception as e:
-        st.error(f"Erro ao conectar ao banco de dados: {str(e)}")
-        st.info("Certifique-se de que o PostgreSQL está rodando e as credenciais estão corretas.")
+        st.error(f"Error connecting to the database: {str(e)}")
+        st.info("Ensure PostgreSQL is running and credentials are correct.")
 
-# Informações do modelo
+# Champion model metadata
 st.divider()
-st.header("Informações do Modelo")
+st.header("Model Information")
 
 try:
     response = requests.get(f"{API_URL}/model-info", timeout=5)
@@ -347,13 +347,13 @@ try:
 
     col1, col2 = st.columns(2)
     with col1:
-        st.subheader("Metadados")
+        st.subheader("Metadata")
         st.write(f"**Run ID:** {model_info['run_id']}")
-        st.write(f"**Tipo de Modelo:** {model_info['model_type']}")
+        st.write(f"**Model Type:** {model_info['model_type']}")
         st.write(f"**PR-AUC:** {model_info['pr_auc']:.4f}")
 
     with col2:
-        st.subheader("Métricas")
+        st.subheader("Metrics")
         metrics = model_info["metrics"]
         for key, value in metrics.items():
             if isinstance(value, (int, float)):
@@ -361,8 +361,8 @@ try:
 
 except requests.exceptions.ConnectionError:
     st.warning(
-        "Não foi possível conectar à API para obter informações do modelo. "
-        "Certifique-se de que a API está rodando."
+        "Could not connect to the API to get model information. "
+        "Ensure the API is running."
     )
 except Exception as e:
-    st.warning(f"Erro ao obter informações do modelo: {str(e)}")
+    st.warning(f"Error getting model information: {str(e)}")

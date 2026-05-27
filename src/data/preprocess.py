@@ -1,3 +1,5 @@
+"""Training data preparation and class balancing."""
+
 from typing import Tuple
 
 import numpy as np
@@ -14,9 +16,21 @@ def prepare_train_test(
     random_state: int = 42,
     scale: bool = True,
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, StandardScaler | None]:
-    """
-    Separa features/alvo e divide em treino/teste com estratificação.
-    Features V1–V28 e Amount são escalonadas quando scale=True.
+    """Split features and target into stratified train and test sets.
+
+    Features V1–V28 and Amount are standardized when ``scale=True``.
+    The ``Time`` column is excluded from features.
+
+    Args:
+        df: Input dataframe.
+        target_column: Name of the binary target column.
+        test_size: Fraction of rows held out for testing.
+        random_state: Random seed for reproducibility.
+        scale: Whether to fit ``StandardScaler`` on training features.
+
+    Returns:
+        Tuple of (X_train, X_test, y_train, y_test, scaler). ``scaler`` is
+        ``None`` when ``scale=False``.
     """
     feature_cols = [c for c in df.columns if c not in (target_column, "Time")]
     X = df[feature_cols].copy()
@@ -44,21 +58,20 @@ def apply_balance_strategy(
     sampling_ratio: float = 0.5,
     random_state: int = 42,
 ) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Aplica estratégia de balanceamento ao conjunto de treino.
+    """Apply a class-balancing strategy to the training set.
 
     Args:
-        X_train: Features de treino
-        y_train: Target de treino
-        strategy: "none", "smote", ou "oversampling"
-        sampling_ratio: Ratio para oversampling/SMOTE (0.0 a 1.0)
-        random_state: Semente aleatória
+        X_train: Training feature matrix.
+        y_train: Training labels.
+        strategy: One of ``"none"``, ``"smote"``, or ``"oversampling"``.
+        sampling_ratio: Target ratio for minority oversampling (0.0 to 1.0).
+        random_state: Random seed for resampling.
 
     Returns:
-        X_train_balanced, y_train_balanced
+        Resampled (X_train, y_train). Unchanged when ``strategy`` is ``"none"``.
 
     Raises:
-        ValueError: Se strategy não for válido
+        ValueError: If ``strategy`` is not recognized.
     """
     if strategy == "none":
         return X_train, y_train
@@ -74,5 +87,5 @@ def apply_balance_strategy(
         return oversampler.fit_resample(X_train, y_train)
 
     raise ValueError(
-        f"Estratégia inválida: {strategy}. Use 'none', 'smote' ou 'oversampling'."
+        f"Invalid strategy: {strategy}. Use 'none', 'smote', or 'oversampling'."
     )

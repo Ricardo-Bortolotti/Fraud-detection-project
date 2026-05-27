@@ -1,4 +1,4 @@
-"""Treina XGBoost e registra no MLflow (parâmetros via config ou CLI)."""
+"""Train XGBoost and log runs to MLflow (config or CLI parameters)."""
 
 import argparse
 import sys
@@ -36,6 +36,15 @@ XGB_CONFIG_KEYS = XGB_PARAM_KEYS + ("train_sample_size", "auto_scale_pos_weight"
 
 
 def _extract_xgb_params(cfg_block: dict[str, Any]) -> tuple[dict[str, Any], int | None, bool]:
+    """Extract XGBoost hyperparameters from a config block.
+
+    Args:
+        cfg_block: YAML block for one experiment or the default model section.
+
+    Returns:
+        Tuple of (hyperparameters, optional ``train_sample_size``,
+        ``auto_scale_pos_weight`` flag).
+    """
     params: dict[str, Any] = {}
     train_sample_size: int | None = None
     auto_scale_pos_weight = cfg_block.get("auto_scale_pos_weight", False)
@@ -61,6 +70,17 @@ def _subsample_train(
     train_sample_size: int,
     random_state: int,
 ) -> tuple[np.ndarray, np.ndarray]:
+    """Return a stratified training subsample.
+
+    Args:
+        X_train: Full training feature matrix.
+        y_train: Full training labels.
+        train_sample_size: Target number of training rows.
+        random_state: Random seed for the split.
+
+    Returns:
+        Subsampled (X_train, y_train), unchanged if already small enough.
+    """
     if len(X_train) <= train_sample_size:
         return X_train, y_train
 
@@ -78,6 +98,16 @@ def _resolve_scale_pos_weight(
     xgb_params: dict[str, Any],
     auto_scale_pos_weight: bool,
 ) -> float | None:
+    """Resolve ``scale_pos_weight`` from config, CLI, or class counts.
+
+    Args:
+        y_train: Training labels used when auto-scaling is enabled.
+        xgb_params: Hyperparameters that may include an explicit weight.
+        auto_scale_pos_weight: Whether to compute weight as negatives/positives.
+
+    Returns:
+        Positive-class weight for XGBoost, or ``None`` if not applicable.
+    """
     if xgb_params.get("scale_pos_weight") is not None:
         return xgb_params["scale_pos_weight"]
     if auto_scale_pos_weight:
@@ -96,14 +126,29 @@ def _build_run_config(
     cli_train_sample_size: int | None = None,
     cli_auto_scale: bool | None = None,
 ) -> tuple[str, dict[str, Any], int | None, bool]:
+    """Resolve MLflow run name, XGBoost params, subsample, and auto-scale flag.
+
+    Args:
+        cfg: Full project configuration.
+        experiment_name: Named experiment under ``model.xgboost.experiments``.
+        cli_overrides: Optional CLI parameter overrides.
+        cli_train_sample_size: Optional CLI subsample size override.
+        cli_auto_scale: Optional CLI override for auto ``scale_pos_weight``.
+
+    Returns:
+        Tuple of (run_name, hyperparameters, train_sample_size, auto_scale).
+
+    Raises:
+        ValueError: If ``experiment_name`` is not defined in config.
+    """
     xgb_cfg = cfg["model"]["xgboost"]
     experiments = {e["name"]: e for e in xgb_cfg.get("experiments", [])}
 
     if experiment_name:
         if experiment_name not in experiments:
-            available = ", ".join(experiments) or "(nenhuma)"
+            available = ", ".join(experiments) or "(none)"
             raise ValueError(
-                f"Experimento '{experiment_name}' não encontrado. Disponíveis: {available}"
+                f"Experiment '{experiment_name}' not found. Available: {available}"
             )
         xgb_params, train_sample_size, auto_scale = _extract_xgb_params(
             experiments[experiment_name]
@@ -132,12 +177,26 @@ def train_single_run(
     balance_strategy: str = "none",
     sampling_ratio: float = 0.5,
 ) -> dict[str, float]:
+    """Load data, train XGBoost, and log one MLflow run.
+
+    Args:
+        cfg: Full project configuration.
+        run_name: MLflow run name.
+        xgb_params: Hyperparameters for the estimator (except resolved weight).
+        train_sample_size: Optional stratified subsample size before training.
+        auto_scale_pos_weight: Whether to auto-compute ``scale_pos_weight``.
+        balance_strategy: Class balancing strategy for training data.
+        sampling_ratio: Minority sampling ratio when balancing is enabled.
+
+    Returns:
+        Test-set metrics dictionary.
+    """
     seed = cfg["project"]["random_seed"]
     raw_path = ROOT / cfg["paths"]["raw_data"]
 
     print(f"\n=== Run: {run_name} ===")
     if train_sample_size:
-        print(f"Amostra de treino (estratificada): {train_sample_size:,} linhas")
+        print(f"Stratified training sample: {train_sample_size:,} rows")
 
     df = load_creditcard_data(raw_path)
     X_train, X_test, y_train, y_test, scaler = prepare_train_test(
@@ -153,7 +212,7 @@ def train_single_run(
 
     n_train_before_balance = len(X_train)
     if balance_strategy != "none":
-        print(f"Aplicando balanceamento: {balance_strategy} (ratio={sampling_ratio})")
+        print(f"Applying balancing: {balance_strategy} (ratio={sampling_ratio})")
         X_train, y_train = apply_balance_strategy(
             X_train, y_train, strategy=balance_strategy, sampling_ratio=sampling_ratio, random_state=seed
         )
@@ -162,7 +221,7 @@ def train_single_run(
     fit_params = {k: v for k, v in xgb_params.items() if k != "scale_pos_weight"}
     model = build_xgboost(random_state=seed, scale_pos_weight=scale_pos_weight, **fit_params)
 
-    print(f"Hiperparâmetros: {fit_params}")
+    print(f"Hyperparameters: {fit_params}")
     print(f"scale_pos_weight: {scale_pos_weight}")
 
     log_params: dict[str, Any] = {
@@ -181,7 +240,7 @@ def train_single_run(
         log_params["sampling_ratio"] = sampling_ratio
         log_params["n_train_before_balance"] = n_train_before_balance
 
-    print("Treinando XGBoost...")
+    print("Training XGBoost...")
     metrics = train_and_log(
         model,
         X_train,
@@ -193,7 +252,7 @@ def train_single_run(
         scaler=scaler,
     )
 
-    print("Métricas no conjunto de teste:")
+    print("Test set metrics:")
     for k, v in metrics.items():
         print(f"  {k}: {v:.4f}")
 
@@ -201,7 +260,12 @@ def train_single_run(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Treina XGBoost com parâmetros customizados.")
+    """Parse command-line arguments for XGBoost training.
+
+    Returns:
+        Parsed arguments namespace.
+    """
+    parser = argparse.ArgumentParser(description="Train XGBoost with custom parameters.")
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--experiment", type=str, default=None)
     parser.add_argument("--all-experiments", action="store_true")
@@ -219,30 +283,31 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--auto-scale-pos-weight",
         action="store_true",
-        help="Calcula scale_pos_weight = negativos/positivos no treino",
+        help="Set scale_pos_weight = negatives/positives on training data",
     )
     parser.add_argument("--n-jobs", type=int, default=None)
     parser.add_argument("--train-sample-size", type=int, default=None)
     parser.add_argument(
         "--use-smote",
         action="store_true",
-        help="Usa SMOTE para oversampling da classe minoritária",
+        help="Use SMOTE to oversample the minority class",
     )
     parser.add_argument(
         "--use-oversampling",
         action="store_true",
-        help="Usa RandomOverSampler para oversampling da classe minoritária",
+        help="Use RandomOverSampler to oversample the minority class",
     )
     parser.add_argument(
         "--sampling-ratio",
         type=float,
         default=0.5,
-        help="Ratio para oversampling/SMOTE (0.0 a 1.0)",
+        help="Sampling ratio for oversampling/SMOTE (0.0 to 1.0)",
     )
     return parser.parse_args()
 
 
 def main() -> None:
+    """Entry point: configure MLflow and run XGBoost training."""
     args = parse_args()
     cfg = load_config(args.config)
 
@@ -273,7 +338,6 @@ def main() -> None:
     if args.n_jobs is not None:
         cli_overrides["n_jobs"] = args.n_jobs
 
-    # Validação de estratégias de balanceamento mutuamente exclusivas
     active_strategies = []
     if args.train_sample_size is not None:
         active_strategies.append("subsampling")
@@ -284,7 +348,7 @@ def main() -> None:
 
     if len(active_strategies) > 1:
         raise ValueError(
-            f"Apenas uma estratégia de balanceamento pode ser usada por vez. Ativas: {', '.join(active_strategies)}"
+            f"Only one balancing strategy may be used at a time. Active: {', '.join(active_strategies)}"
         )
 
     balance_strategy = "none"
@@ -320,7 +384,7 @@ def main() -> None:
             run_name = args.run_name
         train_single_run(cfg, run_name, xgb_params, train_sample_size, auto_scale, balance_strategy, args.sampling_ratio)
 
-    print(f"\nExperimentos MLflow em: {ROOT / cfg['mlflow']['tracking_uri']}")
+    print(f"\nMLflow experiments at: {ROOT / cfg['mlflow']['tracking_uri']}")
 
 
 if __name__ == "__main__":

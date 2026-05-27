@@ -1,3 +1,5 @@
+"""Classification metrics for fraud detection."""
+
 from typing import Any
 
 import numpy as np
@@ -16,7 +18,19 @@ def classification_metrics(
     y_pred: np.ndarray,
     y_proba: np.ndarray | None = None,
 ) -> dict[str, float]:
-    """Métricas para classificação binária de fraude."""
+    """Compute binary classification metrics for fraud detection.
+
+    Args:
+        y_true: Ground-truth labels.
+        y_pred: Predicted class labels.
+        y_proba: Predicted positive-class probabilities. When provided and
+            both classes are present in ``y_true``, ROC-AUC and PR-AUC are
+            included.
+
+    Returns:
+        Dictionary with at least ``accuracy``, ``precision``, ``recall``, and
+        ``f1``. May also include ``roc_auc`` and ``pr_auc``.
+    """
     metrics: dict[str, Any] = {
         "accuracy": float(accuracy_score(y_true, y_pred)),
         "precision": float(precision_score(y_true, y_pred, zero_division=0)),

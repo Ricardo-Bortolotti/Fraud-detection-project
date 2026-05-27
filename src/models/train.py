@@ -1,3 +1,6 @@
+"""MLflow training and logging utilities."""
+
+from pathlib import Path
 from typing import Any
 
 import joblib
@@ -19,7 +22,21 @@ def train_and_log(
     params: dict[str, Any] | None = None,
     scaler: StandardScaler | None = None,
 ) -> dict[str, float]:
-    """Treina o modelo, calcula métricas e registra no MLflow."""
+    """Train a classifier, evaluate on the test set, and log to MLflow.
+
+    Args:
+        model: Scikit-learn compatible classifier.
+        X_train: Training features.
+        X_test: Test features.
+        y_train: Training labels.
+        y_test: Test labels.
+        model_name: Run name and MLflow model tag.
+        params: Hyperparameters and run metadata to log.
+        scaler: Optional fitted scaler persisted as an artifact when provided.
+
+    Returns:
+        Test-set metrics from :func:`classification_metrics`.
+    """
     params = params or {}
 
     with mlflow.start_run(run_name=model_name):
@@ -36,7 +53,6 @@ def train_and_log(
         mlflow.sklearn.log_model(model, artifact_path="model")
         mlflow.set_tag("model_type", model_name)
 
-        # Salvar scaler se fornecido
         if scaler is not None:
             scaler_path = Path("models/champion/model/model/scaler.joblib")
             scaler_path.parent.mkdir(parents=True, exist_ok=True)

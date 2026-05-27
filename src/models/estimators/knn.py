@@ -1,3 +1,5 @@
+"""KNN estimator factory."""
+
 from typing import Any
 
 from sklearn.neighbors import KNeighborsClassifier
@@ -12,7 +14,20 @@ def build_knn(
     n_jobs: int = -1,
     **kwargs: Any,
 ) -> KNeighborsClassifier:
-    """KNN para classificação de fraude."""
+    """Build a KNN classifier for fraud detection.
+
+    Args:
+        n_neighbors: Number of neighbors.
+        weights: Weight function (``"uniform"`` or ``"distance"``).
+        algorithm: Neighbor search algorithm.
+        metric: Distance metric.
+        p: Power parameter for Minkowski metric.
+        n_jobs: Parallel jobs; ``-1`` uses all cores.
+        **kwargs: Additional arguments passed to ``KNeighborsClassifier``.
+
+    Returns:
+        Configured ``KNeighborsClassifier`` instance.
+    """
     return KNeighborsClassifier(
         n_neighbors=n_neighbors,
         weights=weights,

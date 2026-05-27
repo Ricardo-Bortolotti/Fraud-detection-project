@@ -1,6 +1,6 @@
-# 💳 Detecção de Fraude em Cartões de Crédito
+# 💳 Credit Card Fraud Detection
 
-Projeto de detecção de fraude em transações de cartão de crédito utilizando Machine Learning, FastAPI, PostgreSQL, MLflow e Streamlit.
+Fraud detection project for credit card transactions using Machine Learning, FastAPI, PostgreSQL, MLflow, and Streamlit.
 
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104-green)](https://fastapi.tiangolo.com/)
@@ -8,17 +8,17 @@ Projeto de detecção de fraude em transações de cartão de crédito utilizand
 [![Docker](https://img.shields.io/badge/Docker-Compose-blue)](https://www.docker.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15-blue)](https://www.postgresql.org/)
 
-## 🎯 Visão Geral
+## 🎯 Overview
 
-Este projeto implementa uma pipeline completa de Machine Learning para detecção de fraudes em transações de cartão de crédito, incluindo tracking de experimentos, versionamento de modelos e deploy containerizado:
+This project implements a complete Machine Learning pipeline for credit card fraud detection, including experiment tracking, model versioning, and containerized deployment:
 
-- **Experimentação**: MLflow para tracking de experimentos e versionamento de modelos
-- **Deploy**: API FastAPI com Docker Compose para orquestração
-- **Monitoramento**: Persistência de predições para inspeção operacional e análise exploratória
-- **Persistência**: PostgreSQL para armazenamento de predições e metadados
-- **Escalabilidade**: Containerização com Docker Compose para isolamento e reprodutibilidade local
+- **Experimentation**: MLflow for experiment tracking and model versioning
+- **Deployment**: FastAPI API with Docker Compose for orchestration
+- **Monitoring**: Persistence of predictions for operational inspection and exploratory analysis
+- **Persistence**: PostgreSQL for storing predictions and metadata
+- **Scalability**: Containerization with Docker Compose for isolation and local reproducibility
 
-## 🏗️ Arquitetura
+## 🏗️ Architecture
 
 ```
 ┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
@@ -27,41 +27,41 @@ Este projeto implementa uma pipeline completa de Machine Learning para detecçã
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
 
-### Componentes
+### Components
 
-- **PostgreSQL**: Banco de dados relacional com dois schemas:
-  - `fraud_detection`: Armazena histórico de predições da API
-  - `mlflow`: Backend para tracking de experimentos MLflow
+- **PostgreSQL**: Relational database with two schemas:
+  - `fraud_detection`: Stores API prediction history
+  - `mlflow`: Backend for MLflow experiment tracking
 
-- **MLflow Server**: Plataforma de MLOps para:
-  - Tracking de experimentos e hiperparâmetros
-  - Versionamento de modelos
-  - Comparação de métricas entre runs
+- **MLflow Server**: MLOps platform for:
+  - Experiment and hyperparameter tracking
+  - Model versioning
+  - Metric comparison across runs
 
-- **FastAPI API**: Serviço REST para:
-  - Predições via API
-  - Endpoint `/predict` com validação Pydantic
-  - Logging automático de predições no PostgreSQL
-  - Health checks e documentação automática
+- **FastAPI API**: REST service for:
+  - Predictions via API
+  - `/predict` endpoint with Pydantic validation
+  - Automatic prediction logging to PostgreSQL
+  - Health checks and auto-generated documentation
 
-- **Streamlit App**: Interface web com:
-  - Entrada manual de features para predição
-  - Upload em lote (JSON)
-  - Dashboard de monitoramento com estatísticas e gráficos
-  - Informações do modelo campeão
+- **Streamlit App**: Web interface with:
+  - Manual feature input for single predictions
+  - Batch upload (JSON)
+  - Monitoring dashboard with statistics and charts
+  - Champion model information
 
-## 📁 Estrutura do Projeto
+## 📁 Project Structure
 
 ```
 .
 ├── api/                    # FastAPI application
-│   ├── main.py            # Endpoints, schemas, lógica de predição
+│   ├── main.py            # Endpoints, schemas, prediction logic
 │   └── Dockerfile         # Build configuration
 ├── app/                    # Streamlit interface
-│   ├── streamlit_app.py   # Dashboard interativo
+│   ├── streamlit_app.py   # Interactive dashboard
 │   └── Dockerfile
 ├── config/                 # Configuration files
-│   └── config.yaml        # Hiperparâmetros e paths
+│   └── config.yaml        # Hyperparameters and paths
 ├── data/                   # Data storage
 │   ├── external/          # External datasets
 │   ├── processed/         # Processed data
@@ -70,13 +70,13 @@ Este projeto implementa uma pipeline completa de Machine Learning para detecçã
 │   ├── init-db.sql        # PostgreSQL initialization
 │   └── mlflow.Dockerfile  # MLflow server build
 ├── models/                 # Model storage
-│   └── champion/          # Modelo em produção
-│       ├── model/         # Artefatos do modelo
-│       └── metadata.json  # Metadados do campeão
+│   └── champion/          # Production model
+│       ├── model/         # Model artifacts
+│       └── metadata.json  # Champion metadata
 ├── notebooks/              # Jupyter notebooks
-│   └── 01_eda.ipynb       # Análise exploratória
+│   └── 01_eda.ipynb       # Exploratory analysis
 ├── scripts/                # Training scripts
-│   ├── select_champion.py # Seleção do modelo campeão
+│   ├── select_champion.py # Champion model selection
 │   ├── train_logistic_regression.py
 │   ├── train_knn.py
 │   ├── train_random_forest.py
@@ -93,16 +93,16 @@ Este projeto implementa uma pipeline completa de Machine Learning para detecçã
 └── uv.lock                # Locked dependencies
 ```
 
-## � Configuração de Variáveis de Ambiente
+## 🔐 Environment Variables
 
-Para segurança, as credenciais são gerenciadas via variáveis de ambiente:
+For security, credentials are managed via environment variables:
 
-1. Copie o arquivo de exemplo:
+1. Copy the example file:
 ```bash
 cp .env.example .env
 ```
 
-2. Edite o arquivo `.env` com suas credenciais:
+2. Edit `.env` with your credentials:
 ```bash
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=your_secure_password_here
@@ -111,58 +111,58 @@ DATABASE_URL=postgresql://postgres:your_secure_password_here@postgres:5432/fraud
 MLFLOW_BACKEND_STORE_URI=postgresql://postgres:your_secure_password_here@postgres:5432/mlflow
 ```
 
-3. O arquivo `.env` já está no `.gitignore` e não será commitado no repositório.
+3. The `.env` file is listed in `.gitignore` and will not be committed.
 
-## �🚀 Quick Start
+## 🚀 Quick Start
 
-### Pré-requisitos
+### Prerequisites
 
-- Docker Desktop instalado
+- Docker Desktop installed
 - Docker Compose v2+
 
-### Subir todos os serviços
+### Start all services
 
 ```bash
 docker compose up --build
 ```
 
-Isso iniciará:
-- **PostgreSQL** (porta 5432) — Backend para MLflow e predições
-- **MLflow Server** (porta 5000) — Tracking e UI de experimentos
-- **FastAPI** (porta 8000) — API de predição
-- **Streamlit** (porta 8501) — Interface web
+This starts:
+- **PostgreSQL** (port 5432) — Backend for MLflow and predictions
+- **MLflow Server** (port 5000) — Experiment tracking and UI
+- **FastAPI** (port 8000) — Prediction API
+- **Streamlit** (port 8501) — Web interface
 
-### Acessar os serviços
+### Access services
 
 - **API**: http://localhost:8000
 - **API Docs**: http://localhost:8000/docs
 - **Streamlit**: http://localhost:8501
 - **MLflow UI**: http://localhost:5000
 
-### Comandos úteis
+### Useful commands
 
 ```bash
-# Parar serviços
+# Stop services
 docker compose down
 
-# Parar e remover volumes (reseta banco de dados)
+# Stop and remove volumes (resets the database)
 docker compose down -v
 
-# Ver logs de todos os serviços
+# View logs for all services
 docker compose logs -f
 
-# Ver logs de um serviço específico
+# View logs for a specific service
 docker compose logs -f api
 
-# Reconstruir apenas um serviço
+# Rebuild a single service
 docker compose up --build api
 ```
 
-## 📊 Treinamento de Modelos
+## 📊 Model Training
 
-### Configuração
+### Configuration
 
-Os hiperparâmetros são centralizados em `config/config.yaml`, permitindo fácil experimentação:
+Hyperparameters are centralized in `config/config.yaml` for easy experimentation:
 
 ```yaml
 model:
@@ -176,21 +176,21 @@ model:
         C: 0.01
 ```
 
-### Scripts de Treinamento
+### Training scripts
 
 ```bash
-# Regressão Logística
-python scripts/train_logistic_regression.py                    # Config padrão
+# Logistic regression
+python scripts/train_logistic_regression.py                    # Default config
 python scripts/train_logistic_regression.py --experiment lr_balanced_strong_reg
-python scripts/train_logistic_regression.py --all-experiments  # Todas as variantes
+python scripts/train_logistic_regression.py --all-experiments  # All variants
 python scripts/train_logistic_regression.py --C 0.1 --penalty l1 --solver saga  # CLI override
 
-# KNN (usa amostra estratificada para performance)
+# KNN (uses stratified sample for performance)
 python scripts/train_knn.py
 python scripts/train_knn.py --experiment knn_k5_distance
 python scripts/train_knn.py --n-neighbors 7 --weights distance
 
-# Random Forest
+# Random forest
 python scripts/train_random_forest.py
 python scripts/train_random_forest.py --experiment rf_balanced_deep
 python scripts/train_random_forest.py --n-estimators 200 --max-depth 12
@@ -201,21 +201,21 @@ python scripts/train_xgboost.py --experiment xgb_auto_scale_deep
 python scripts/train_xgboost.py --auto-scale-pos-weight --learning-rate 0.05
 ```
 
-### Seleção do Modelo Campeão
+### Champion model selection
 
-Após treinar múltiplos modelos, selecione o campeão baseado em PR-AUC:
+After training multiple models, select the champion based on PR-AUC:
 
 ```bash
 python scripts/select_champion.py
 ```
 
-Isso copia o melhor modelo para `models/champion/` e gera `metadata.json`.
+This copies the best model to `models/champion/` and writes `metadata.json`.
 
 ## 🔧 API Endpoints
 
 ### POST /predict
 
-Faz predição de fraude para uma transação.
+Score a transaction for fraud.
 
 **Request:**
 ```json
@@ -240,7 +240,7 @@ Faz predição de fraude para uma transação.
 
 ### GET /model-info
 
-Retorna informações do modelo campeão.
+Return champion model metadata.
 
 **Response:**
 ```json
@@ -264,104 +264,134 @@ Health check endpoint.
 }
 ```
 
-## 📈 Monitoramento
+## 📈 Monitoring
 
-O Streamlit App oferece três abas:
+The Streamlit app provides three tabs:
 
-1. **Entrada Manual**: Predição individual com input de features
-2. **Upload JSON**: Predição em lote via upload de arquivo JSON
-3. **Monitoramento**: Dashboard com:
-   - Estatísticas gerais (total, fraudes, taxa de fraude)
-   - Gráfico de distribuição (legítimas vs fraudes)
-   - Distribuição de probabilidades por faixa
-   - Timeline de predições por data
-   - Tabela das 50 predições mais recentes
+1. **Manual Input**: Single prediction with feature inputs
+2. **JSON Upload**: Batch predictions via JSON file upload
+3. **Monitoring**: Dashboard with:
+   - Summary statistics (total, frauds, fraud rate)
+   - Distribution chart (legitimate vs fraud)
+   - Probability distribution by bucket
+   - Prediction timeline by date
+   - Table of the 50 most recent predictions
 
-## 🛠️ Stack Tecnológico
+## 🛠️ Tech Stack
 
-- **Linguagem**: Python 3.11
+- **Language**: Python 3.11
 - **ML Framework**: scikit-learn, XGBoost
-- **API**: FastAPI com Pydantic para validação
-- **MLOps**: MLflow para experiment tracking
+- **API**: FastAPI with Pydantic validation
+- **MLOps**: MLflow for experiment tracking
 - **Database**: PostgreSQL 15
 - **ORM**: SQLAlchemy
-- **Frontend**: Streamlit com Plotly para visualizações
+- **Frontend**: Streamlit with Plotly visualizations
 - **Containerization**: Docker & Docker Compose
 - **Package Manager**: uv (fast Python package installer)
 
-## 🧪 Testes
+## 🧪 Tests
+
+The project includes unit tests for the API, data modules, evaluation, and scripts.
+
+### Install test dependencies
 
 ```bash
-# Rodar todos os testes
-pytest tests/
+# Install development dependencies (dev group)
+uv add --dev pytest pytest-cov pytest-asyncio httpx
 
-# Rodar com coverage
-pytest tests/ --cov=src --cov-report=html
+# Sync all dependencies
+uv sync
 ```
 
-## 📝 Decisões de Design
+### Run tests
 
-### PostgreSQL com Dois Bancos
+```bash
+# Run all tests
+pytest tests/
 
-Separação de concerns:
-- `fraud_detection`: Predições da API em produção
-- `mlflow`: Experimentos e metadados de modelos
+# Run tests with coverage
+pytest tests/ --cov=src --cov=api --cov=app --cov=scripts --cov-report=html
 
-Benefícios:
-- Isolamento de dados
-- Backup independente
-- Escalabilidade separada
+# Run tests for a specific module
+pytest tests/test_api.py
 
-### Multi-stage Docker Build
+# Verbose output
+pytest tests/ -v
 
-Otimização de imagem:
-- **Base**: Dependências com cache inteligente
-- **API**: Apenas dependências necessárias para API
-- **App**: Apenas dependências Streamlit
+# Show print statements
+pytest tests/ -s
+```
 
-### MLflow com Backend PostgreSQL
+### Test layout
 
-Persistência de experimentos:
-- Compartilhamento entre equipe
-- Histórico completo
-- Comparação fácil entre runs
+- `tests/test_api.py` — FastAPI endpoints and schemas
+- `tests/test_data.py` — Data loading and preprocessing
+- `tests/test_evaluation.py` — Evaluation metrics
+- `tests/test_scripts.py` — Training scripts and champion selection
 
-### PR-AUC como Métrica Principal
+## 📝 Design Decisions
 
-Para datasets desbalanceados (fraude é rara):
-- PR-AUC é mais informativa que ROC-AUC
-- Foca no desempenho na classe positiva (fraude)
-- Alinha com objetivo de negócio
+### PostgreSQL with two databases
 
-## ⚠️ Limitações Atuais
+Separation of concerns:
+- `fraud_detection`: Production API predictions
+- `mlflow`: Experiments and model metadata
 
-- **Dataset altamente desbalanceado**: Fraudes representam ~0.17% das transações, requer técnicas específicas de balanceamento
-- **Não há drift detection em produção**: Sistema não monitora mudanças na distribuição de dados ao longo do tempo
-- **Sistema ainda não possui autenticação**: API e dashboard são públicos, inadequado para produção
-- **Predições síncronas podem limitar throughput**: API processa uma requisição por vez, sem batching ou async
+Benefits:
+- Data isolation
+- Independent backups
+- Separate scaling
 
-## 📊 Performance do Modelo
+### Multi-stage Docker build
+
+Image optimization:
+- **Base**: Dependencies with smart caching
+- **API**: Only API-required dependencies
+- **App**: Only Streamlit dependencies
+
+### MLflow with PostgreSQL backend
+
+Experiment persistence:
+- Team-wide sharing
+- Full history
+- Easy run comparison
+
+### PR-AUC as the primary metric
+
+For imbalanced datasets (fraud is rare):
+- PR-AUC is more informative than ROC-AUC
+- Focuses on positive-class (fraud) performance
+- Aligns with business goals
+
+## ⚠️ Current Limitations
+
+- **Highly imbalanced dataset**: Fraud is ~0.17% of transactions; balancing techniques are required
+- **No production drift detection**: The system does not monitor distribution shift over time
+- **No authentication yet**: API and dashboard are public; not suitable for production as-is
+- **Synchronous predictions may limit throughput**: The API processes one request at a time without batching
+
+## 📊 Model Performance
 
 - **Best PR-AUC achieved**: 0.8542
 - **Recall @ 5% FPR**: 0.78
 
 ## 🚧 Roadmap
 
-- [ ] Adicionar testes unitários e de integração
-- [ ] Implementar CI/CD com GitHub Actions
-- [ ] Adicionar autenticação na API
-- [ ] Implementar rate limiting
-- [ ] Adicionar Prometheus/Grafana para monitoring
-- [ ] Adicionar sistema de drift detection em produção
-- [ ] Adicionar mais modelos (CatBoost, LightGBM)
-- [ ] Implementar retraining automático
-- [ ] Adicionar A/B testing para modelos
+- [ ] Add unit and integration tests
+- [ ] Implement CI/CD with GitHub Actions
+- [ ] Add API authentication
+- [ ] Implement rate limiting
+- [ ] Add Prometheus/Grafana monitoring
+- [ ] Add production drift detection
+- [ ] Add more models (CatBoost, LightGBM)
+- [ ] Implement automatic retraining
+- [ ] Add A/B testing for models
 
-## 📄 Licença
+## 📄 License
 
 MIT
 
-## 👤 Autor
+## 👤 Author
 
-Ricardo Bortolotti
+Ricardo Bortolotti  
 Data Scientist | Machine Learning Engineering

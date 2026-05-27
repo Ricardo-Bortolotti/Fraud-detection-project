@@ -17,7 +17,7 @@ mlflow:
 
 model:
   logistic_regression:
-    # Run única quando não passar --experiment nem --all-experiments
+    # Single run when no --experiment or --all-experiments is passed
     max_iter: 1000
     class_weight: balanced
     C: 1.0
@@ -25,7 +25,7 @@ model:
     solver: lbfgs
     tol: 0.0001
 
-    # Variantes para comparar no MLflow (python scripts/train_logistic_regression.py --all-experiments)
+    # Variants to compare in MLflow (python scripts/train_logistic_regression.py --all-experiments)
     experiments:
       - name: lr_balanced_default
         max_iter: 1000
@@ -63,7 +63,7 @@ model:
         solver: saga
 
   knn:
-    # KNN em ~227k linhas de treino é lento; usa amostra estratificada no fit
+    # KNN on ~227k training rows is slow; uses stratified sample for fit
     train_sample_size: 20000
     n_neighbors: 5
     weights: uniform

@@ -1,3 +1,5 @@
+"""Logistic regression estimator factory."""
+
 from typing import Any
 
 from sklearn.linear_model import LogisticRegression
@@ -13,7 +15,21 @@ def build_logistic_regression(
     tol: float = 1e-4,
     **kwargs: Any,
 ) -> LogisticRegression:
-    """Regressão logística configurável para detecção de fraude."""
+    """Build a logistic regression classifier for fraud detection.
+
+    Args:
+        max_iter: Maximum iterations for the solver.
+        class_weight: Class weights or ``"balanced"``.
+        random_state: Random seed.
+        C: Inverse regularization strength.
+        penalty: Regularization norm (``"l1"``, ``"l2"``, or ``"elasticnet"``).
+        solver: Optimization algorithm.
+        tol: Convergence tolerance.
+        **kwargs: Additional arguments passed to ``LogisticRegression``.
+
+    Returns:
+        Configured ``LogisticRegression`` instance.
+    """
     return LogisticRegression(
         max_iter=max_iter,
         class_weight=class_weight,

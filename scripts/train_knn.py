@@ -1,4 +1,4 @@
-"""Treina KNN e registra no MLflow (parâmetros via config ou CLI)."""
+"""Train KNN and log runs to MLflow (config or CLI parameters)."""
 
 import argparse
 import sys
@@ -24,7 +24,14 @@ KNN_CONFIG_KEYS = KNN_PARAM_KEYS + ("train_sample_size",)
 
 
 def _extract_knn_params(cfg_block: dict[str, Any]) -> tuple[dict[str, Any], int | None]:
-    """Extrai hiperparâmetros do KNN e tamanho opcional da amostra de treino."""
+    """Extract KNN hyperparameters and optional training sample size from config.
+
+    Args:
+        cfg_block: YAML block for one experiment or the default model section.
+
+    Returns:
+        Tuple of (hyperparameters, optional ``train_sample_size``).
+    """
     params: dict[str, Any] = {}
     train_sample_size: int | None = None
 
@@ -45,7 +52,17 @@ def _subsample_train(
     train_sample_size: int,
     random_state: int,
 ) -> tuple[np.ndarray, np.ndarray]:
-    """Amostra estratificada do treino (KNN é custoso em datasets grandes)."""
+    """Return a stratified training subsample (KNN is costly on large data).
+
+    Args:
+        X_train: Full training feature matrix.
+        y_train: Full training labels.
+        train_sample_size: Target number of training rows.
+        random_state: Random seed for the split.
+
+    Returns:
+        Subsampled (X_train, y_train), unchanged if already small enough.
+    """
     if len(X_train) <= train_sample_size:
         return X_train, y_train
 
@@ -64,14 +81,28 @@ def _build_run_config(
     cli_overrides: dict[str, Any] | None = None,
     cli_train_sample_size: int | None = None,
 ) -> tuple[str, dict[str, Any], int | None]:
+    """Resolve MLflow run name, KNN params, and optional subsample size.
+
+    Args:
+        cfg: Full project configuration.
+        experiment_name: Named experiment under ``model.knn.experiments``.
+        cli_overrides: Optional CLI parameter overrides.
+        cli_train_sample_size: Optional CLI subsample size override.
+
+    Returns:
+        Tuple of (run_name, hyperparameters, train_sample_size).
+
+    Raises:
+        ValueError: If ``experiment_name`` is not defined in config.
+    """
     knn_cfg = cfg["model"]["knn"]
     experiments = {e["name"]: e for e in knn_cfg.get("experiments", [])}
 
     if experiment_name:
         if experiment_name not in experiments:
-            available = ", ".join(experiments) or "(nenhuma)"
+            available = ", ".join(experiments) or "(none)"
             raise ValueError(
-                f"Experimento '{experiment_name}' não encontrado. Disponíveis: {available}"
+                f"Experiment '{experiment_name}' not found. Available: {available}"
             )
         knn_params, train_sample_size = _extract_knn_params(experiments[experiment_name])
         run_name = experiment_name
@@ -95,13 +126,26 @@ def train_single_run(
     balance_strategy: str = "none",
     sampling_ratio: float = 0.5,
 ) -> dict[str, float]:
+    """Load data, train KNN, and log one MLflow run.
+
+    Args:
+        cfg: Full project configuration.
+        run_name: MLflow run name.
+        knn_params: Hyperparameters for the estimator.
+        train_sample_size: Optional stratified subsample size before training.
+        balance_strategy: Class balancing strategy for training data.
+        sampling_ratio: Minority sampling ratio when balancing is enabled.
+
+    Returns:
+        Test-set metrics dictionary.
+    """
     seed = cfg["project"]["random_seed"]
     raw_path = ROOT / cfg["paths"]["raw_data"]
 
     print(f"\n=== Run: {run_name} ===")
-    print(f"Hiperparâmetros: {knn_params}")
+    print(f"Hyperparameters: {knn_params}")
     if train_sample_size:
-        print(f"Amostra de treino (estratificada): {train_sample_size:,} linhas")
+        print(f"Stratified training sample: {train_sample_size:,} rows")
 
     df = load_creditcard_data(raw_path)
     X_train, X_test, y_train, y_test, scaler = prepare_train_test(
@@ -117,7 +161,7 @@ def train_single_run(
 
     n_train_before_balance = len(X_train)
     if balance_strategy != "none":
-        print(f"Aplicando balanceamento: {balance_strategy} (ratio={sampling_ratio})")
+        print(f"Applying balancing: {balance_strategy} (ratio={sampling_ratio})")
         X_train, y_train = apply_balance_strategy(
             X_train, y_train, strategy=balance_strategy, sampling_ratio=sampling_ratio, random_state=seed
         )
@@ -138,7 +182,7 @@ def train_single_run(
         log_params["sampling_ratio"] = sampling_ratio
         log_params["n_train_before_balance"] = n_train_before_balance
 
-    print("Treinando KNN...")
+    print("Training KNN...")
     metrics = train_and_log(
         model,
         X_train,
@@ -150,7 +194,7 @@ def train_single_run(
         scaler=scaler,
     )
 
-    print("Métricas no conjunto de teste:")
+    print("Test set metrics:")
     for k, v in metrics.items():
         print(f"  {k}: {v:.4f}")
 
@@ -158,13 +202,18 @@ def train_single_run(
 
 
 def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Treina KNN com parâmetros customizados.")
+    """Parse command-line arguments for KNN training.
+
+    Returns:
+        Parsed arguments namespace.
+    """
+    parser = argparse.ArgumentParser(description="Train KNN with custom parameters.")
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument(
         "--experiment",
         type=str,
         default=None,
-        help="Nome em model.knn.experiments",
+        help="Name in model.knn.experiments",
     )
     parser.add_argument("--all-experiments", action="store_true")
     parser.add_argument("--run-name", type=str, default=None)
@@ -183,28 +232,29 @@ def parse_args() -> argparse.Namespace:
         "--train-sample-size",
         type=int,
         default=None,
-        help="Subamostra estratificada do treino (recomendado para dataset grande)",
+        help="Stratified training subsample (recommended for large datasets)",
     )
     parser.add_argument(
         "--use-smote",
         action="store_true",
-        help="Usa SMOTE para oversampling da classe minoritária",
+        help="Use SMOTE to oversample the minority class",
     )
     parser.add_argument(
         "--use-oversampling",
         action="store_true",
-        help="Usa RandomOverSampler para oversampling da classe minoritária",
+        help="Use RandomOverSampler to oversample the minority class",
     )
     parser.add_argument(
         "--sampling-ratio",
         type=float,
         default=0.5,
-        help="Ratio para oversampling/SMOTE (0.0 a 1.0)",
+        help="Sampling ratio for oversampling/SMOTE (0.0 to 1.0)",
     )
     return parser.parse_args()
 
 
 def main() -> None:
+    """Entry point: configure MLflow and run KNN training."""
     args = parse_args()
     cfg = load_config(args.config)
 
@@ -225,7 +275,6 @@ def main() -> None:
     if args.n_jobs is not None:
         cli_overrides["n_jobs"] = args.n_jobs
 
-    # Validação de estratégias de balanceamento mutuamente exclusivas
     active_strategies = []
     if args.train_sample_size is not None:
         active_strategies.append("subsampling")
@@ -236,7 +285,7 @@ def main() -> None:
 
     if len(active_strategies) > 1:
         raise ValueError(
-            f"Apenas uma estratégia de balanceamento pode ser usada por vez. Ativas: {', '.join(active_strategies)}"
+            f"Only one balancing strategy may be used at a time. Active: {', '.join(active_strategies)}"
         )
 
     balance_strategy = "none"
@@ -268,7 +317,7 @@ def main() -> None:
             run_name = args.run_name
         train_single_run(cfg, run_name, knn_params, train_sample_size, balance_strategy, args.sampling_ratio)
 
-    print(f"\nExperimentos MLflow em: {ROOT / cfg['mlflow']['tracking_uri']}")
+    print(f"\nMLflow experiments at: {ROOT / cfg['mlflow']['tracking_uri']}")
 
 
 if __name__ == "__main__":

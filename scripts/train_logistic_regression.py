@@ -1,4 +1,4 @@
-"""Treina regressão logística e registra no MLflow (parâmetros via config ou CLI)."""
+"""Train logistic regression and log runs to MLflow (config or CLI parameters)."""
 
 import argparse
 import sys
@@ -20,13 +20,28 @@ LR_PARAM_KEYS = ("max_iter", "class_weight", "C", "penalty", "solver", "tol")
 
 
 def _parse_class_weight(value: str | None) -> str | dict | None:
+    """Parse CLI class_weight string into a sklearn-compatible value.
+
+    Args:
+        value: Raw CLI value; ``None``, ``"none"``, or ``"null"`` map to ``None``.
+
+    Returns:
+        Parsed class weight or ``None``.
+    """
     if value is None or value.lower() in ("none", "null"):
         return None
     return value
 
 
 def _extract_lr_params(cfg_block: dict[str, Any]) -> dict[str, Any]:
-    """Extrai hiperparâmetros da regressão logística de um bloco do YAML."""
+    """Extract logistic regression hyperparameters from a config block.
+
+    Args:
+        cfg_block: YAML block for one experiment or the default model section.
+
+    Returns:
+        Dictionary of parameters accepted by :func:`build_logistic_regression`.
+    """
     params: dict[str, Any] = {}
     for key in LR_PARAM_KEYS:
         if key in cfg_block:
@@ -41,14 +56,27 @@ def _build_run_config(
     experiment_name: str | None = None,
     cli_overrides: dict[str, Any] | None = None,
 ) -> tuple[str, dict[str, Any]]:
+    """Resolve MLflow run name and hyperparameters from config and CLI.
+
+    Args:
+        cfg: Full project configuration.
+        experiment_name: Named experiment under ``model.logistic_regression.experiments``.
+        cli_overrides: Optional CLI parameter overrides.
+
+    Returns:
+        Tuple of (run_name, hyperparameter dict).
+
+    Raises:
+        ValueError: If ``experiment_name`` is not defined in config.
+    """
     lr_cfg = cfg["model"]["logistic_regression"]
     experiments = {e["name"]: e for e in lr_cfg.get("experiments", [])}
 
     if experiment_name:
         if experiment_name not in experiments:
-            available = ", ".join(experiments) or "(nenhuma)"
+            available = ", ".join(experiments) or "(none)"
             raise ValueError(
-                f"Experimento '{experiment_name}' não encontrado. Disponíveis: {available}"
+                f"Experiment '{experiment_name}' not found. Available: {available}"
             )
         base = _extract_lr_params(experiments[experiment_name])
         run_name = experiment_name
@@ -69,11 +97,23 @@ def train_single_run(
     balance_strategy: str = "none",
     sampling_ratio: float = 0.5,
 ) -> dict[str, float]:
+    """Load data, train logistic regression, and log one MLflow run.
+
+    Args:
+        cfg: Full project configuration.
+        run_name: MLflow run name.
+        lr_params: Hyperparameters for the estimator.
+        balance_strategy: Class balancing strategy for training data.
+        sampling_ratio: Minority sampling ratio when balancing is enabled.
+
+    Returns:
+        Test-set metrics dictionary.
+    """
     seed = cfg["project"]["random_seed"]
     raw_path = ROOT / cfg["paths"]["raw_data"]
 
     print(f"\n=== Run: {run_name} ===")
-    print(f"Hiperparâmetros: {lr_params}")
+    print(f"Hyperparameters: {lr_params}")
 
     df = load_creditcard_data(raw_path)
     X_train, X_test, y_train, y_test, scaler = prepare_train_test(
@@ -85,7 +125,7 @@ def train_single_run(
 
     n_train_before_balance = len(X_train)
     if balance_strategy != "none":
-        print(f"Aplicando balanceamento: {balance_strategy} (ratio={sampling_ratio})")
+        print(f"Applying balancing: {balance_strategy} (ratio={sampling_ratio})")
         X_train, y_train = apply_balance_strategy(
             X_train, y_train, strategy=balance_strategy, sampling_ratio=sampling_ratio, random_state=seed
         )
@@ -115,7 +155,7 @@ def train_single_run(
         scaler=scaler,
     )
 
-    print("Métricas no conjunto de teste:")
+    print("Test set metrics:")
     for k, v in metrics.items():
         print(f"  {k}: {v:.4f}")
 
@@ -123,27 +163,32 @@ def train_single_run(
 
 
 def parse_args() -> argparse.Namespace:
+    """Parse command-line arguments for logistic regression training.
+
+    Returns:
+        Parsed arguments namespace.
+    """
     parser = argparse.ArgumentParser(
-        description="Treina regressão logística com parâmetros customizados."
+        description="Train logistic regression with custom parameters."
     )
     parser.add_argument(
         "--config",
         type=str,
         default=None,
-        help="Caminho para config.yaml (padrão: config/config.yaml)",
+        help="Path to config.yaml (default: config/config.yaml)",
     )
     parser.add_argument(
         "--experiment",
         type=str,
         default=None,
-        help="Nome de uma variante em model.logistic_regression.experiments",
+        help="Name of a variant in model.logistic_regression.experiments",
     )
     parser.add_argument(
         "--all-experiments",
         action="store_true",
-        help="Treina todas as variantes listadas no config",
+        help="Train all variants listed in config",
     )
-    parser.add_argument("--run-name", type=str, default=None, help="Nome da run no MLflow")
+    parser.add_argument("--run-name", type=str, default=None, help="MLflow run name")
     parser.add_argument("--max-iter", type=int, default=None)
     parser.add_argument("--class-weight", type=str, default=None)
     parser.add_argument("--C", type=float, default=None, dest="c")
@@ -153,23 +198,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--use-smote",
         action="store_true",
-        help="Usa SMOTE para oversampling da classe minoritária",
+        help="Use SMOTE to oversample the minority class",
     )
     parser.add_argument(
         "--use-oversampling",
         action="store_true",
-        help="Usa RandomOverSampler para oversampling da classe minoritária",
+        help="Use RandomOverSampler to oversample the minority class",
     )
     parser.add_argument(
         "--sampling-ratio",
         type=float,
         default=0.5,
-        help="Ratio para oversampling/SMOTE (0.0 a 1.0)",
+        help="Sampling ratio for oversampling/SMOTE (0.0 to 1.0)",
     )
     return parser.parse_args()
 
 
 def main() -> None:
+    """Entry point: configure MLflow and run training."""
     args = parse_args()
     cfg = load_config(args.config)
 
@@ -190,10 +236,10 @@ def main() -> None:
     if args.tol is not None:
         cli_overrides["tol"] = args.tol
 
-    # Validação de estratégias de balanceamento mutuamente exclusivas
     if args.use_smote and args.use_oversampling:
         raise ValueError(
-            "Apenas uma estratégia de balanceamento pode ser usada por vez. Use --use-smote ou --use-oversampling, não ambos."
+            "Only one balancing strategy may be used at a time. "
+            "Use --use-smote or --use-oversampling, not both."
         )
 
     balance_strategy = "none"
@@ -221,7 +267,7 @@ def main() -> None:
             run_name = args.run_name
         train_single_run(cfg, run_name, lr_params, balance_strategy, args.sampling_ratio)
 
-    print(f"\nExperimentos MLflow em: {ROOT / cfg['mlflow']['tracking_uri']}")
+    print(f"\nMLflow experiments at: {ROOT / cfg['mlflow']['tracking_uri']}")
 
 
 if __name__ == "__main__":
