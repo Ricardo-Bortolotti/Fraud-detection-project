@@ -49,3 +49,7 @@ predictions.db
 *.log
 logs/
 data/output/
+
+# Cursor files
+.cursorignore
+.cursorrules
