@@ -1,4 +1,8 @@
-def main():
+"""Project entry point."""
+
+
+def main() -> None:
+    """Print a greeting to verify the package runs."""
     print("Hello from optimization-project!")
 
 
